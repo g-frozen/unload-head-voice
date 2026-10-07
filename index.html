@@ -263,31 +263,10 @@ var voiceUrl =
 
 try {
 
-  if (window.opener && !window.opener.closed) {
-
-    window.opener.location.href =
-      voiceUrl;
-
-    setTimeout(
-      function() {
-        window.close();
-      },
-      300
-    );
-
-  } else {
-
-    window.location.href =
-      voiceUrl;
-
-  }
-
-} catch (error) {
-
   window.location.href =
-    voiceUrl;
-
-}
+  APP_URL +
+  '?voice=' +
+  encodeURIComponent(text);
 
 
 
