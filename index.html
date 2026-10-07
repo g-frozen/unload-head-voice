@@ -256,14 +256,7 @@ body {
             setTimeout(
               function() {
 
-var voiceUrl =
-  APP_URL +
-  '?voice=' +
-  encodeURIComponent(text);
-
-try {
-
-  if (window.opener) {
+if (window.opener) {
 
   window.opener.location.href =
     APP_URL +
