@@ -3,6 +3,7 @@
 <html lang="ru">
 
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -13,10 +14,12 @@
   <title>Разгрузи голову — голос</title>
 
   <style>
+
     body {
       font-family: Arial, sans-serif;
       padding: 30px;
       text-align: center;
+      background: #f7f7f7;
     }
 
     button {
@@ -25,11 +28,19 @@
       border: none;
       border-radius: 12px;
       cursor: pointer;
+      background: #111;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.5;
     }
 
     #status {
       margin-top: 25px;
       padding: 20px;
+      background: white;
+      border-radius: 15px;
       text-align: left;
       white-space: pre-line;
       line-height: 1.6;
@@ -38,13 +49,16 @@
     #result {
       margin-top: 20px;
       padding: 20px;
-      background: #f1f1f1;
-      border-radius: 12px;
+      background: white;
+      border-radius: 15px;
       font-size: 20px;
       text-align: left;
     }
+
   </style>
+
 </head>
+
 
 <body>
 
@@ -59,11 +73,15 @@
   </div>
 
   <div id="result">
-    Здесь появится распознанный текст.
+    Здесь появится текст.
   </div>
 
 
   <script>
+
+    var APP_URL =
+      'https://script.google.com/macros/s/AKfycbxFlglFpuvnqtl7HBaKP7vgrqLrQwApOlG5VrCSKdVdEhIyKeoCFl5DHyxY3BJYQuRQ/exec';
+
 
     var recordButton =
       document.getElementById('record');
@@ -94,8 +112,7 @@
         '❌ Этот браузер не поддерживает распознавание речи.'
       );
 
-      recordButton.disabled =
-        true;
+      recordButton.disabled = true;
 
     } else {
 
@@ -130,20 +147,22 @@
           false;
 
 
+        recordButton.disabled =
+          true;
+
+
         log(
           '🎙️ Слушаю...'
         );
-
-
-        recordButton.disabled =
-          true;
 
 
         recognition.onresult =
           function(event) {
 
             var text =
-              event.results[0][0].transcript;
+              event
+                .results[0][0]
+                .transcript;
 
 
             resultEl.textContent =
@@ -155,8 +174,27 @@
             );
 
 
-            recordButton.disabled =
-              false;
+            /*
+             * Передаём распознанный текст
+             * в основное приложение.
+             */
+
+            log(
+              '⏳ Передаём текст в «Разгрузи голову»...'
+            );
+
+
+            setTimeout(
+              function() {
+
+                window.location.href =
+                  APP_URL +
+                  '?voice=' +
+                  encodeURIComponent(text);
+
+              },
+              1000
+            );
 
           };
 
@@ -168,7 +206,6 @@
               '❌ Ошибка: ' +
               event.error
             );
-
 
             recordButton.disabled =
               false;
