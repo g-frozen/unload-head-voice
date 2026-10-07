@@ -255,19 +255,7 @@ body {
 
             setTimeout(
               function() {
-```javascript
-
-if (window.parent && window.parent !== window) {
-
-  window.parent.postMessage(
-    {
-      type: 'voiceResult',
-      text: text
-    },
-    '*'
-  );
-
-} else if (window.opener) {
+if (window.opener) {
 
   window.opener.location.href =
     APP_URL +
@@ -284,7 +272,6 @@ if (window.parent && window.parent !== window) {
     encodeURIComponent(text);
 
 }
-```
 
 
               },
