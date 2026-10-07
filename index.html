@@ -187,10 +187,23 @@
             setTimeout(
               function() {
 
-                window.location.href =
-                  APP_URL +
-                  '?voice=' +
-                  encodeURIComponent(text);
+                if (window.opener) {
+
+  window.opener.location.href =
+    APP_URL +
+    '?voice=' +
+    encodeURIComponent(text);
+
+  window.close();
+
+} else {
+
+  window.location.href =
+    APP_URL +
+    '?voice=' +
+    encodeURIComponent(text);
+
+}
 
               },
               1000
