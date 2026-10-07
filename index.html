@@ -1,909 +1,144 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Разгрузи голову — голос</title>
 
   <style>
-
-    * {
-      box-sizing: border-box;
-    }
-
     body {
-      margin: 0;
-      min-height: 100vh;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
       font-family: Arial, sans-serif;
-
-      background: #f5f3ef;
-      color: #222;
-    }
-
-    .card {
-      width: min(90%, 460px);
-
-      padding: 32px;
-
+      padding: 30px;
       text-align: center;
-
-      background: white;
-
-      border-radius: 24px;
-
-      box-shadow:
-        0 12px 40px
-        rgba(0, 0, 0, .08);
-    }
-
-    h1 {
-      margin-top: 0;
-      font-size: 32px;
     }
 
     button {
-      width: 90px;
-      height: 90px;
-
+      font-size: 20px;
+      padding: 15px 25px;
+      border-radius: 12px;
       border: none;
-      border-radius: 50%;
-
-      font-size: 36px;
-
       cursor: pointer;
-
-      background: #222;
-      color: white;
-    }
-
-    button.recording {
-      background: #c62828;
-    }
-
-    button:disabled {
-      opacity: .6;
-      cursor: default;
     }
 
     #status {
-      margin-top: 24px;
-
-      min-height: 80px;
-
-      color: #666;
-
-      line-height: 1.5;
-
-      white-space: pre-wrap;
-
-      word-break: break-word;
+      margin-top: 25px;
+      white-space: pre-line;
+      font-size: 18px;
+      text-align: left;
     }
-
-    #result {
-      margin-top: 20px;
-
-      padding: 16px;
-
-      background: #f5f3ef;
-
-      border-radius: 12px;
-
-      line-height: 1.5;
-
-      display: none;
-    }
-
   </style>
-
 </head>
-
 
 <body>
 
-  <div class="card">
+  <h1>🎙️ Голосовой ввод</h1>
 
-    <h1>🎙️</h1>
+  <button id="record">
+    🎙️ Начать запись
+  </button>
 
-    <p>
-      Голосовой ввод
-    </p>
-
-    <button id="voice">
-      🎙️
-    </button>
-
-    <div id="status">
-      Нажми и говори
-    </div>
-
-    <div id="result"></div>
-
+  <div id="status">
+    Страница загружена.
   </div>
-
 
   <script>
 
-    /*************************************************
-     * APPS SCRIPT
-     *************************************************/
-
-    var APPS_SCRIPT_URL =
-      'https://script.google.com/macros/s/AKfycbxFlglFpuvnqtl7HBaKP7vgrqLrQwApOlG5VrCSKdVdEhIyKeoCFl5DHyxY3BJYQuRQ/exec';
-
-
-    /*************************************************
-     * ELEMENTS
-     *************************************************/
-
-    var voice =
-      document.getElementById('voice');
-
-    var status =
+    var statusEl =
       document.getElementById('status');
 
-    var resultBox =
-      document.getElementById('result');
+    var recordButton =
+      document.getElementById('record');
 
+    function log(text) {
 
-    /*************************************************
-     * STATE
-     *************************************************/
-
-    var recorder = null;
-
-    var stream = null;
-
-    var chunks = [];
-
-    var recording = false;
-
-
-    /*************************************************
-     * STATUS
-     *************************************************/
-
-    function setStatus(text) {
-
-      status.textContent = text;
-
-      console.log(text);
+      statusEl.textContent +=
+        '\n' + text;
 
     }
 
-
-    /*************************************************
-     * BUTTON
-     *************************************************/
-
-    voice.addEventListener(
-      'click',
-      function() {
-
-        if (recording) {
-
-          stopRecording();
-
-        } else {
-
-          startRecording();
-
-        }
-
-      }
-    );
-
-
-    /*************************************************
-     * START
-     *************************************************/
-
-    function startRecording() {
-
-      resultBox.style.display = 'none';
-
-      resultBox.textContent = '';
-
-      setStatus(
-        '1. Запрашиваю доступ к микрофону…'
-      );
-
-
-      if (
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia
-      ) {
-
-        setStatus(
-          'ОШИБКА:\n' +
-          'Браузер не поддерживает микрофон.'
-        );
-
-        return;
-
-      }
-
-
-      navigator.mediaDevices
-        .getUserMedia({
-          audio: true
-        })
-
-        .then(
-          function(receivedStream) {
-
-            stream =
-              receivedStream;
-
-            chunks = [];
-
-
-            setStatus(
-              '2. Микрофон доступен.\n' +
-              'Начинаю запись…'
-            );
-
-
-            var mimeType = '';
-
-
-            if (
-              MediaRecorder.isTypeSupported(
-                'audio/webm;codecs=opus'
-              )
-            ) {
-
-              mimeType =
-                'audio/webm;codecs=opus';
-
-            } else if (
-              MediaRecorder.isTypeSupported(
-                'audio/webm'
-              )
-            ) {
-
-              mimeType =
-                'audio/webm';
-
-            }
-
-
-            if (mimeType) {
-
-              recorder =
-                new MediaRecorder(
-                  stream,
-                  {
-                    mimeType:
-                      mimeType
-                  }
-                );
-
-            } else {
-
-              recorder =
-                new MediaRecorder(
-                  stream
-                );
-
-            }
-
-
-            recorder.ondataavailable =
-              function(event) {
-
-                if (
-                  event.data &&
-                  event.data.size > 0
-                ) {
-
-                  chunks.push(
-                    event.data
-                  );
-
-                }
-
-              };
-
-
-            recorder.onerror =
-              function(event) {
-
-                setStatus(
-                  'ОШИБКА MediaRecorder:\n' +
-                  JSON.stringify(event)
-                );
-
-              };
-
-
-            recorder.onstop =
-              function() {
-
-                setStatus(
-                  '3. Запись остановлена.\n' +
-                  'Создаю аудиофайл…'
-                );
-
-
-                if (stream) {
-
-                  stream
-                    .getTracks()
-                    .forEach(
-                      function(track) {
-
-                        track.stop();
-
-                      }
-                    );
-
-                }
-
-
-                var audioBlob =
-                  new Blob(
-                    chunks,
-                    {
-                      type:
-                        recorder.mimeType ||
-                        'audio/webm'
-                    }
-                  );
-
-
-                console.log(
-                  'Audio size:',
-                  audioBlob.size
-                );
-
-                console.log(
-                  'Audio type:',
-                  audioBlob.type
-                );
-
-
-                if (
-                  audioBlob.size === 0
-                ) {
-
-                  finishWithError(
-                    'ОШИБКА:\n' +
-                    'Аудиофайл пустой.'
-                  );
-
-                  return;
-
-                }
-
-
-                setStatus(
-                  '4. Аудиофайл создан.\n' +
-                  'Размер: ' +
-                  Math.round(
-                    audioBlob.size / 1024
-                  ) +
-                  ' KB\n\n' +
-                  'Готовлю отправку…'
-                );
-
-
-                sendAudio(
-                  audioBlob
-                );
-
-              };
-
-
-            recorder.start();
-
-            recording = true;
-
-            voice.classList.add(
-              'recording'
-            );
-
-            voice.textContent =
-              '⏹️';
-
-          }
-        )
-
-        .catch(
-          function(error) {
-
-            finishWithError(
-              'ОШИБКА микрофона:\n' +
-              error.name +
-              '\n' +
-              error.message
-            );
-
-            console.error(
-              error
-            );
-
-          }
-        );
-
-    }
-
-
-    /*************************************************
-     * STOP
-     *************************************************/
-
-    function stopRecording() {
-
-      if (
-        !recorder ||
-        recorder.state === 'inactive'
-      ) {
-
-        return;
-
-      }
-
-
-      recording = false;
-
-      voice.classList.remove(
-        'recording'
-      );
-
-      voice.textContent =
-        '⏳';
-
-      voice.disabled = true;
-
-
-      setStatus(
-        'Останавливаю запись…'
-      );
-
-
-      recorder.stop();
-
-    }
-
-
-    /*************************************************
-     * SEND AUDIO
-     *************************************************/
-
-    function sendAudio(
-      audioBlob
-    ) {
-
-      setStatus(
-        '5. Преобразую аудио…'
-      );
-
-
-      var reader =
-        new FileReader();
-
-
-      reader.onloadend =
-        function() {
-
-          try {
-
-            var dataUrl =
-              reader.result;
-
-
-            if (!dataUrl) {
-
-              throw new Error(
-                'FileReader не вернул данные.'
-              );
-
-            }
-
-
-            var parts =
-              dataUrl.split(',');
-
-
-            if (
-              parts.length < 2
-            ) {
-
-              throw new Error(
-                'Не удалось получить Base64.'
-              );
-
-            }
-
-
-            var base64Audio =
-              parts[1];
-
-
-            console.log(
-              'Base64 length:',
-              base64Audio.length
-            );
-
-
-            var token =
-              Date.now().toString() +
-              '_' +
-              Math.random()
-                .toString(36)
-                .substring(2);
-
-
-            setStatus(
-              '6. Аудио преобразовано.\n' +
-              'Размер Base64: ' +
-              base64Audio.length +
-              '\n\n' +
-              'Отправляю в Apps Script…'
-            );
-
-
-            var formData =
-              new URLSearchParams();
-
-
-            formData.append(
-              'token',
-              token
-            );
-
-            formData.append(
-              'audio',
-              base64Audio
-            );
-
-            formData.append(
-              'mimeType',
-              audioBlob.type ||
-              'audio/webm'
-            );
-
-
-            console.log(
-              'Отправка POST…'
-            );
-
-
-            fetch(
-              APPS_SCRIPT_URL,
-              {
-                method: 'POST',
-
-                mode: 'no-cors',
-
-                body: formData
-              }
-            )
-
-            .then(
-              function() {
-
-                console.log(
-                  'POST завершён'
-                );
-
-
-                setStatus(
-                  '7. POST отправлен.\n\n' +
-                  'Жду результат распознавания…'
-                );
-
-
-                waitForResult(
-                  token
-                );
-
-              }
-            )
-
-            .catch(
-              function(error) {
-
-                finishWithError(
-                  'ОШИБКА POST:\n' +
-                  error.name +
-                  '\n' +
-                  error.message
-                );
-
-                console.error(
-                  error
-                );
-
-              }
-            );
-
-          } catch (error) {
-
-            finishWithError(
-              'ОШИБКА подготовки аудио:\n' +
-              error.message
-            );
-
-          }
-
-        };
-
-
-      reader.onerror =
-        function() {
-
-          finishWithError(
-            'ОШИБКА FileReader.'
-          );
-
-        };
-
-
-      reader.readAsDataURL(
-        audioBlob
-      );
-
-    }
-
-
-    /*************************************************
-     * POLLING
-     *************************************************/
-
-    function waitForResult(
-      token
-    ) {
-
-      var callbackName =
-        'voiceCallback_' +
-        Date.now() +
-        '_' +
-        Math.random()
-          .toString(36)
-          .substring(2);
-
-
-      window[
-        callbackName
-      ] = function(result) {
-
-        console.log(
-          'Ответ polling:',
-          result
-        );
-
-
-        if (
-          result.status ===
-          'done'
-        ) {
-
-          if (
-            result.text
-          ) {
-
-            setStatus(
-              '8. Распознавание завершено!'
-            );
-
-
-            resultBox.style.display =
-              'block';
-
-            resultBox.textContent =
-              result.text;
-
-          } else {
-
-            setStatus(
-              'Apps Script ответил,\n' +
-              'но текст пустой.'
-            );
-
-          }
-
-
-          resetButton();
-
-          cleanupCallback(
-            callbackName
-          );
-
-          return;
-
-        }
-
-
-        if (
-          result.status ===
-          'error'
-        ) {
-
-          finishWithError(
-            'ОШИБКА распознавания:\n' +
-            result.message
-          );
-
-          cleanupCallback(
-            callbackName
-          );
-
-          return;
-
-        }
-
-
-        setStatus(
-          '8. Apps Script пока обрабатывает запись…'
-        );
-
-
-        setTimeout(
-          function() {
-
-            checkResult(
-              token,
-              callbackName
-            );
-
-          },
-          1500
-        );
-
-      };
-
-
-      checkResult(
-        token,
-        callbackName
-      );
-
-    }
-
-
-    /*************************************************
-     * CHECK RESULT
-     *************************************************/
-
-    function checkResult(
-      token,
-      callbackName
-    ) {
-
-      var script =
-        document.createElement(
-          'script'
-        );
-
-
-      script.src =
-        APPS_SCRIPT_URL +
-        '?action=poll' +
-        '&token=' +
-        encodeURIComponent(
-          token
-        ) +
-        '&callback=' +
-        encodeURIComponent(
-          callbackName
-        ) +
-        '&t=' +
-        Date.now();
-
-
-      script.onload =
-        function() {
-
-          console.log(
-            'Polling script loaded'
-          );
-
-        };
-
-
-      script.onerror =
-        function() {
-
-          console.error(
-            'Polling error'
-          );
-
-
-          setStatus(
-            'ОШИБКА polling.\n' +
-            'Apps Script не отвечает на запрос результата.'
-          );
-
-
-          setTimeout(
-            function() {
-
-              checkResult(
-                token,
-                callbackName
-              );
-
-            },
-            2000
-          );
-
-        };
-
-
-      document.body.appendChild(
-        script
-      );
-
-    }
-
-
-    /*************************************************
-     * CLEANUP
-     *************************************************/
-
-    function cleanupCallback(
-      callbackName
-    ) {
+    recordButton.onclick = async function() {
 
       try {
 
-        delete window[
-          callbackName
-        ];
+        log('Шаг 1: кнопка нажата.');
 
-      } catch (error) {}
+        log('Шаг 2: запрашиваем микрофон...');
 
-    }
+        var stream =
+          await navigator.mediaDevices
+            .getUserMedia({
+              audio: true
+            });
 
+        log('Шаг 3: микрофон разрешён.');
 
-    /*************************************************
-     * RESET
-     *************************************************/
+        var recorder =
+          new MediaRecorder(stream);
 
-    function resetButton() {
+        var chunks = [];
 
-      voice.disabled =
-        false;
+        recorder.ondataavailable =
+          function(event) {
 
-      voice.textContent =
-        '🎙️';
+            if (event.data.size > 0) {
+              chunks.push(event.data);
+            }
 
-      recording =
-        false;
+          };
 
-    }
+        recorder.onstart =
+          function() {
 
+            log(
+              'Шаг 4: запись началась.'
+            );
 
-    /*************************************************
-     * ERROR
-     *************************************************/
+          };
 
-    function finishWithError(
-      message
-    ) {
+        recorder.onstop =
+          function() {
 
-      resetButton();
+            log(
+              'Шаг 5: запись остановлена.'
+            );
 
-      setStatus(
-        message
-      );
+            stream
+              .getTracks()
+              .forEach(function(track) {
+                track.stop();
+              });
 
-    }
+          };
+
+        recorder.start();
+
+        setTimeout(function() {
+
+          if (
+            recorder.state ===
+            'recording'
+          ) {
+
+            recorder.stop();
+
+          }
+
+        }, 3000);
+
+      } catch (error) {
+
+        log(
+          'ОШИБКА: ' +
+          error.name +
+          ' — ' +
+          error.message
+        );
+
+      }
+
+    };
 
   </script>
 
 </body>
-
 </html>
