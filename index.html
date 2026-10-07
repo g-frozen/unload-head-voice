@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -16,6 +17,7 @@
       font-family: Arial, sans-serif;
       padding: 30px;
       text-align: center;
+      background: #f7f7f7;
     }
 
     button {
@@ -24,13 +26,36 @@
       border-radius: 12px;
       border: none;
       cursor: pointer;
+      background: #111;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
     }
 
     #status {
-      margin-top: 25px;
+      margin: 25px auto;
+      max-width: 700px;
       white-space: pre-line;
       font-size: 18px;
       text-align: left;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      line-height: 1.6;
+    }
+
+    #result {
+      margin: 20px auto;
+      max-width: 700px;
+      padding: 20px;
+      background: #eaf7ea;
+      border-radius: 15px;
+      font-size: 20px;
+      text-align: left;
+      display: none;
     }
   </style>
 </head>
@@ -47,16 +72,23 @@
     Страница загружена.
   </div>
 
+  <div id="result"></div>
+
   <script>
 
     var APPS_SCRIPT_URL =
       'https://script.google.com/macros/s/AKfycbxFlglFpuvnqtl7HBaKP7vgrqLrQwApOlG5VrCSKdVdEhIyKeoCFl5DHyxY3BJYQuRQ/exec';
 
+
     var statusEl =
       document.getElementById('status');
 
+    var resultEl =
+      document.getElementById('result');
+
     var recordButton =
       document.getElementById('record');
+
 
     function log(text) {
 
@@ -65,6 +97,7 @@
 
     }
 
+
     function blobToBase64(blob) {
 
       return new Promise(function(resolve, reject) {
@@ -72,21 +105,19 @@
         var reader =
           new FileReader();
 
-        reader.onloadend =
-          function() {
+        reader.onloadend = function() {
 
-            var result =
-              reader.result;
+          var result =
+            reader.result;
 
-            var base64 =
-              result.split(',')[1];
+          var base64 =
+            result.split(',')[1];
 
-            resolve(base64);
+          resolve(base64);
 
-          };
+        };
 
-        reader.onerror =
-          reject;
+        reader.onerror = reject;
 
         reader.readAsDataURL(blob);
 
@@ -94,8 +125,155 @@
 
     }
 
+
+    function createToken() {
+
+      return (
+        Date.now().toString() +
+        '_' +
+        Math.random()
+          .toString(36)
+          .substring(2)
+      );
+
+    }
+
+
+    /*
+     * Получение результата через JSONP.
+     */
+    function pollResult(token) {
+
+      var callbackName =
+        'voiceCallback_' +
+        Date.now() +
+        '_' +
+        Math.random()
+          .toString(36)
+          .substring(2);
+
+
+      window[callbackName] =
+        function(data) {
+
+          try {
+
+            if (
+              data.status === 'processing'
+            ) {
+
+              log(
+                'Распознавание ещё идёт...'
+              );
+
+              setTimeout(function() {
+
+                pollResult(token);
+
+              }, 3000);
+
+              return;
+            }
+
+
+            if (
+              data.status === 'done'
+            ) {
+
+              log(
+                'Шаг 11: распознавание завершено.'
+              );
+
+              resultEl.style.display =
+                'block';
+
+              resultEl.textContent =
+                data.text ||
+                'Текст не распознан.';
+
+              return;
+            }
+
+
+            if (
+              data.status === 'error'
+            ) {
+
+              log(
+                'ОШИБКА РАСПОЗНАВАНИЯ: ' +
+                data.message
+              );
+
+              return;
+            }
+
+
+            log(
+              'Неизвестный ответ сервера.'
+            );
+
+          } finally {
+
+            delete window[callbackName];
+
+            var oldScript =
+              document.getElementById(
+                callbackName
+              );
+
+            if (oldScript) {
+              oldScript.remove();
+            }
+
+          }
+
+        };
+
+
+      var script =
+        document.createElement('script');
+
+      script.id =
+        callbackName;
+
+      script.src =
+        APPS_SCRIPT_URL +
+        '?action=poll' +
+        '&token=' +
+        encodeURIComponent(token) +
+        '&callback=' +
+        encodeURIComponent(callbackName);
+
+      script.onerror =
+        function() {
+
+          log(
+            'ОШИБКА: не удалось получить ответ от Apps Script.'
+          );
+
+          delete window[callbackName];
+
+          script.remove();
+
+        };
+
+
+      document.body.appendChild(script);
+
+    }
+
+
     recordButton.onclick =
       async function() {
+
+        recordButton.disabled =
+          true;
+
+        resultEl.style.display =
+          'none';
+
+        resultEl.textContent =
+          '';
 
         try {
 
@@ -103,24 +281,30 @@
             'Шаг 1: кнопка нажата.'
           );
 
+
           log(
             'Шаг 2: запрашиваем микрофон...'
           );
 
+
           var stream =
-            await navigator.mediaDevices
+            await navigator
+              .mediaDevices
               .getUserMedia({
                 audio: true
               });
+
 
           log(
             'Шаг 3: микрофон разрешён.'
           );
 
+
           var recorder =
             new MediaRecorder(stream);
 
           var chunks = [];
+
 
           recorder.ondataavailable =
             function(event) {
@@ -138,6 +322,7 @@
 
             };
 
+
           recorder.onstart =
             function() {
 
@@ -147,6 +332,7 @@
 
             };
 
+
           recorder.onstop =
             async function() {
 
@@ -154,11 +340,15 @@
                 'Шаг 5: запись остановлена.'
               );
 
+
               stream
                 .getTracks()
-                .forEach(function(track) {
-                  track.stop();
-                });
+                .forEach(
+                  function(track) {
+                    track.stop();
+                  }
+                );
+
 
               try {
 
@@ -172,40 +362,44 @@
                     }
                   );
 
+
                 log(
                   'Шаг 6: аудио создано. Размер: ' +
                   audioBlob.size +
                   ' байт.'
                 );
 
+
                 var base64 =
                   await blobToBase64(
                     audioBlob
                   );
 
+
                 log(
                   'Шаг 7: аудио преобразовано.'
                 );
 
+
                 var token =
-                  Date.now().toString() +
-                  '_' +
-                  Math.random()
-                    .toString(36)
-                    .substring(2);
+                  createToken();
+
 
                 var formData =
                   new FormData();
+
 
                 formData.append(
                   'token',
                   token
                 );
 
+
                 formData.append(
                   'audio',
                   base64
                 );
+
 
                 formData.append(
                   'mimeType',
@@ -213,9 +407,11 @@
                   'audio/webm'
                 );
 
+
                 log(
                   'Шаг 8: отправляем аудио в Apps Script...'
                 );
+
 
                 await fetch(
                   APPS_SCRIPT_URL,
@@ -226,9 +422,28 @@
                   }
                 );
 
+
                 log(
                   'Шаг 9: запрос отправлен.'
                 );
+
+
+                log(
+                  'Шаг 10: ждём распознавание...'
+                );
+
+
+                setTimeout(
+                  function() {
+
+                    pollResult(
+                      token
+                    );
+
+                  },
+                  2000
+                );
+
 
               } catch (error) {
 
@@ -241,22 +456,32 @@
 
               }
 
+
+              recordButton.disabled =
+                false;
+
             };
+
 
           recorder.start();
 
-          setTimeout(function() {
 
-            if (
-              recorder.state ===
-              'recording'
-            ) {
+          setTimeout(
+            function() {
 
-              recorder.stop();
+              if (
+                recorder.state ===
+                'recording'
+              ) {
 
-            }
+                recorder.stop();
 
-          }, 3000);
+              }
+
+            },
+            3000
+          );
+
 
         } catch (error) {
 
@@ -267,6 +492,9 @@
             error.message
           );
 
+          recordButton.disabled =
+            false;
+
         }
 
       };
@@ -276,3 +504,4 @@
 </body>
 
 </html>
+```
