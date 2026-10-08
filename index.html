@@ -255,21 +255,23 @@ body {
             );
 
 
-            setTimeout(
-  function() {
+                    setTimeout(
+          function() {
 
-    var url =
-      APP_URL +
-      '?voice=' +
-      encodeURIComponent(text);
+            var url =
+              APP_URL +
+              '?voice=' +
+              encodeURIComponent(text);
 
-    alert(url);
+            alert(url);
 
-    window.location.href = url;
+            window.location.href = url;
 
-  },
-  1000
-);
+          },
+          1000
+        );
+
+          };
 
         recognition.onerror =
           function(event) {
